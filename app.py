@@ -74,11 +74,11 @@ if file:
     col1, col2, col3 = st.columns(3)
     if col1.button("⬅️ Back", disabled=st.session_state.index == 0):
         st.session_state.index = max(0, st.session_state.index - 1)
-        st.experimental_rerun()
+        st.rerun()
 
     if col2.button("⏭️ Skip"):
         st.session_state.index += 1
-        st.experimental_rerun()
+        st.rerun()
 
     if col3.button("✅ Save & Continue"):
         st.session_state.photos_taken[current_part] = file
