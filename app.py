@@ -29,7 +29,7 @@ if st.session_state.mode is None:
     st.subheader("🧠 Choose a Photo Template")
     st.session_state.mode = st.selectbox("Select a mode:", list(MODES.keys()))
     if st.button("Start Capture"):
-        st.experimental_rerun()
+        st.rerun()
     st.stop()
 
 part_list = MODES[st.session_state.mode]
