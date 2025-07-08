@@ -1,89 +1,55 @@
 import streamlit as st
-from PIL import Image
-import os
-import io
-import zipfile
+import datetime
 
-# --- CONFIG ---
-MODES = {
-    "Standard Interior Scope": [
-        "Dash VIN", "Door VIN", "LF Corner", "RF Corner", "RR Corner", "LR Corner",
-        "Odometer", "Dash", "Headliner", "LF Seat", "LF Carpet", "LF Door Trim"
-    ],
-    # Add more modes here (e.g., Hail, Flood, Theft)
-}
+# Define your custom checklist
+part_list = [
+    "Dash VIN", "Door VIN", "LF Corner", "RF Corner",
+    "RR Corner", "LR Corner", "Odometer", "Dash",
+    "Headliner", "LF Seat", "LF Carpet", "LF Door Trim"
+]
 
-st.set_page_config(page_title="SnapScope™ 2.0", layout="centered")
-st.title("📸 SnapScope™ 2.0 – Guided Photo Capture")
+st.set_page_config(page_title="SnapScope Checklist Mode", layout="centered")
+st.title("📋 SnapScope™ – Checklist Mode")
 
-# --- INIT STATE ---
-if "mode" not in st.session_state:
-    st.session_state.mode = None
-if "index" not in st.session_state:
-    st.session_state.index = 0
-if "photos_taken" not in st.session_state:
-    st.session_state.photos_taken = {}
+# Initialize session state
+if "done_parts" not in st.session_state:
+    st.session_state.done_parts = []
 
-# --- MODE SELECTION ---
-if st.session_state.mode is None:
-    st.subheader("🧠 Choose a Photo Template")
-    st.session_state.mode = st.selectbox("Select a mode:", list(MODES.keys()))
-    if st.button("Start Capture"):
-        st.rerun()
-    st.stop()
+if "unit_name" not in st.session_state:
+    st.session_state.unit_name = ""
 
-part_list = MODES[st.session_state.mode]
+# Unit Info
+st.subheader("📦 Set Folder Name (e.g., VIN, Plate, or Unit ID)")
+st.session_state.unit_name = st.text_input("Unit/Folder Name", value=st.session_state.unit_name)
 
-# --- COMPLETED ---
-if st.session_state.index >= len(part_list):
-    st.success("✅ All photos captured and saved.")
+# Suggested Folder
+today = datetime.date.today().strftime("%Y-%m-%d")
+folder_name = f"SnapScope_{today}_{st.session_state.unit_name}" if st.session_state.unit_name else f"SnapScope_{today}"
+st.code(f"📁 Suggested Folder: {folder_name}")
+
+# Checklist Display
+st.subheader("✅ Photo Checklist")
+
+for i, part in enumerate(part_list):
+    is_done = part in st.session_state.done_parts
+    cols = st.columns([5, 1, 2])
+
+    # Display part name
+    cols[0].markdown(f"**{i+1:02d}_{part.replace(' ', '_')}**")
     
-    # Offer download of zip file
-    if st.button("📦 Download All Labeled Photos"):
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zipf:
-            for part, file in st.session_state.photos_taken.items():
-                folder = f"labeled_photos/{part.replace(' ', '_')}"
-                os.makedirs(folder, exist_ok=True)
-                filename = os.path.join(folder, file.name)
-                with open(filename, "wb") as f:
-                    f.write(file.getbuffer())
-                zipf.write(filename, arcname=f"{part.replace(' ', '_')}/{file.name}")
-        st.download_button(
-            label="Download ZIP",
-            data=zip_buffer.getvalue(),
-            file_name="SnapScope_Photos.zip",
-            mime="application/zip"
-        )
-    st.stop()
+    # Copy label to clipboard
+    if cols[1].button("📋", key=f"copy_{part}"):
+        st.toast(f"Copied: {i+1:02d}_{part.replace(' ', '_')}.jpg", icon="📎")
+        st.code(f"{i+1:02d}_{part.replace(' ', '_')}.jpg")
 
-# --- CURRENT STEP ---
-current_part = part_list[st.session_state.index]
-st.markdown(f"### 📷 Step {st.session_state.index + 1} of {len(part_list)} – **{current_part}**")
+    # Mark complete
+    if not is_done and cols[2].button("Mark Done ✅", key=f"done_{part}"):
+        st.session_state.done_parts.append(part)
 
-upload_type = st.radio("Choose input method:", ["📁 Upload", "📷 Use Camera"])
+# Progress bar
+progress = len(st.session_state.done_parts) / len(part_list)
+st.progress(progress, text=f"{len(st.session_state.done_parts)} of {len(part_list)} complete")
 
-if upload_type == "📁 Upload":
-    file = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png"], key=current_part)
-else:
-    file = st.camera_input("Take photo with your camera", key=current_part)
-
-if file:
-    st.image(file, caption=f"{current_part}", use_container_width=True)
-
-    col1, col2, col3 = st.columns(3)
-    if col1.button("⬅️ Back", disabled=st.session_state.index == 0):
-        st.session_state.index = max(0, st.session_state.index - 1)
-        st.rerun()
-
-    if col2.button("⏭️ Skip"):
-        st.session_state.index += 1
-        st.rerun()
-
-    if col3.button("✅ Save & Continue"):
-        st.session_state.photos_taken[current_part] = file
-        st.session_state.index += 1
-        st.rerun()
-else:
-    st.info("📸 Upload or capture a photo to continue.")
-
+# Reset
+if st.button("🔁 Restart Checklist"):
+    st.session_state.done_parts = []
