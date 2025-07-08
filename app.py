@@ -83,7 +83,7 @@ if file:
     if col3.button("✅ Save & Continue"):
         st.session_state.photos_taken[current_part] = file
         st.session_state.index += 1
-        st.experimental_rerun()
+        st.rerun()
 else:
     st.info("📸 Upload or capture a photo to continue.")
 
